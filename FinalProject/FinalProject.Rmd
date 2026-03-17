@@ -1,0 +1,107 @@
+---
+title: "What Factors Affect Smoking Habits in the UK?"
+author: "Katie Repoli"
+date: "May 6, 2024"
+output: 
+  html_document:
+    code_folding: hide
+    theme: flatly
+    toc: true
+    toc_float: true
+    code_download: true
+---
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+# Load any R Packages you may need
+library(tidyverse)
+library(mdsr)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(Metrics)
+library(ggplot2)
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+# Load any data sets you may need
+smoking <- read.csv("smoking.csv")
+```
+
+
+# Introduction
+I used the [UK Smoking](https://www.kaggle.com/datasets/mexwell/uk-smoking-data) data set on Kaggle which provides information on smoking habits in the United Kingdom. This includes gender, age, marital status, highest qualification, nationality, ethnicity, gross income, region, type, and whether or not these people smoke. It also includes how many cigarettes smoked on weekends and weekdays if the person said yes to smoking. I used this data set to determine how **gender, age, marital status, and nationality affect how much people in the UK smoke per week.**
+
+
+
+## Cleaning the Data
+
+```{r}
+smoking_cleaned <- smoking %>% 
+  na.omit(smoking) %>% 
+  filter(smoke == "Yes") %>% 
+  filter(nationality != "British" & nationality != "Other" &
+         nationality != "Refused" & nationality != "Unknown") %>% 
+  mutate(amt_week = amt_weekdays + amt_weekends)
+```
+
+
+
+I first removed all N/A values, as these would be useless for answering my research question. I also filtered my data to only include people who smoke. I then filtered out all people who inputted their nationality as British, as this nationality refers to anyone who is either English, Scottish, or Welsh. The term British for nationality is too broad to answer my question, as it combines the nationalities I'm observing. I also filtered out those whose nationality was "Other," as this means these people are not from the UK at all, and I am strictly analyzing people from the UK. Finally, I filtered out those who refused to input their nationality, or whose nationality was unknown, as this is equivalent to N/A. Since I am trying to determine which people in the UK smoke the most per week, I added a new column, combining the number of cigarettes smoked on weekdays and weekends.
+
+
+
+## Training and Testing the Data
+
+```{r}
+set.seed(42024)
+train.index <- createDataPartition(smoking_cleaned$amt_week, p= 0.8, list = FALSE)
+train <- smoking_cleaned[train.index,]
+test <- smoking_cleaned[-train.index,]
+```
+
+
+
+I split my data for training and testing. I used 80% of it for training and 20% for testing.
+
+
+
+## Regression Tree
+
+```{r}
+tree <- rpart(amt_week~gender+age+marital_status+nationality, data=smoking_cleaned)
+rpart.plot(tree)
+```
+
+
+
+I created a regression tree that predicted how many cigarettes each person living in the UK smoked each week based on their gender, age, marital status, and nationality. This tree predicted that men who were older than 41 years and who are widowed smoked the most per week at 52 cigarettes. Coming in second at 44 cigarettes, were men who are either divorced, married, separated, or single, and between the ages of 41 and 62. Third were people between the ages of 31 and 41, who are either Scottish or Welsh at 43 cigarettes. This tree can help predict how much someone in the UK smokes based on these predictors.
+
+
+
+## Model Evaluation
+
+
+```{r}
+predictions <- predict(tree, newdata=test)
+rmse(actual=predictions, predicted=test$amt_week)
+```
+
+
+
+Because my outcome variable is numeric, I calculated the root mean square error (RMSE) to evaluate my model. I received an RMSE of 15.72, which is a relatively small number. This means that there was a small difference between the predicted and observed values, representing a strong regression model fit. This means the model makes accurate predictions.
+
+
+
+## Data Visualization
+
+```{r}
+ggplot(data=smoking_cleaned, aes(x=amt_week, y=age))+
+  geom_point(aes(color=gender))+
+  facet_wrap(~nationality)+
+  labs(x="Amount of Cigarettes Smoked per Week", y="Age", color="Gender",
+       title="Age, Gender, and Nationality vs. Number of Cigarettes Smoked per Week")
+```
+
+
+
+I created a scatterplot comparing the amount of cigarettes smoked per week to age, gender, and nationality. Based on this visualization, it appears that the majority of the data collected on people in this dataset were English. Within the English, it appears that more women smoke between 0 and 25 cigarettes per week, while mostly older men smoke between 65 and 100 cigarettes per week. As for the Irish, not much data was collected on them specifically, but it appears that more men smoke than women. In Scotland, most people smoke around 0 and 50 cigarettes per week with mostly older men smoking around 45-50. Finally, in Wales, again not much was collected on them, but it appears that more women smoke than men.
