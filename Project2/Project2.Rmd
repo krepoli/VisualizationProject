@@ -1,0 +1,85 @@
+---
+title: "Data Wrangling Using the Quality of Bananas"
+author: "Katie Repoli"
+date: "March 25, 2024"
+output: 
+  html_document:
+    code_folding: hide
+    theme: flatly
+    toc: true
+    toc_float: true
+    code_download: true
+---
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+# Load any R Packages you may need
+library(tidyverse)
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+# Load any data sets you may need
+banana_quality <- read.csv("banana_quality.csv")
+```
+
+
+# Introduction
+
+I will be using [Banana Quality](https://www.kaggle.com/datasets/l3llff/banana) data to teach you how to wrangle data. This data set contains the **size, weight, sweetness, softness, harvest time, ripeness, and acidity** of 8,000 bananas. Each of these components determine the overall **quality** of the banana, specifically whether it is good or bad. I will first focus on the select(), filter(), and count() functions, followed by group_by(), and summarize(). These are all included within the tidyverse package. Click "show" to see my code.
+
+## Select, Filter, and Count
+
+```{r}
+ripeness_positive <- banana_quality %>%
+  select(Ripeness, Quality) %>% 
+  filter(Ripeness >= 0)
+```
+
+
+I have printed the first 10 rows as to not take up the entire page. In reality, there are 5,347 rows.
+
+
+```{r, echo = FALSE}
+ripeness_positive %>% 
+  slice(1:10)
+```
+
+
+
+I used the select() function to choose specific columns from the data: Ripeness and Quality. I then filtered the Ripeness column to only show bananas whose ripeness is above or equal to 0. I basically removed all negative numbers. My prediction was that most of the bananas whose ripeness was positive would be a good-quality banana because ripe bananas typically taste better.
+
+```{r}
+ripeness_positive %>% 
+  count(Quality, sort=T)
+```
+
+
+
+I then used the count() function to find the number of bananas in this dataset that were good vs. bad. I discovered that although the majority of the bananas with a positive ripeness were of good quality, there were more with bad quality than I had predicted. Almost half of the bananas were of bad quality, which means that ripeness has less of an affect on banana quality than I thought.
+
+```{r, warning = FALSE}
+ggplot(data=ripeness_positive, aes(x=Ripeness))+
+  geom_density(aes(color=Quality), size=1.5)+
+  labs(y="Density", title="Density of Good and Bad Bananas vs. Ripeness")+
+  scale_color_manual(values = c("brown2", "chartreuse3"))
+```
+
+
+
+I created a density graph of this data to compare the density to the ripeness of good and bad bananas. There are slightly more bad bananas when the ripeness is lower and slightly more good bananas when the ripeness if higher. But overall, the density is relatively the same for both. There are around the same number of good and bad bananas that have a positive ripeness.
+
+
+## Summarize and Group_by
+
+```{r}
+good_vs_bad <- banana_quality %>% 
+  group_by(Quality) %>% 
+  summarize(num_bananas = n(),
+            avg_sweetness = mean(Sweetness, na.rm=T),
+            avg_softness = mean(Softness, na.rm=T),
+            avg_ripeness = mean(Ripeness, na.rm=T))
+good_vs_bad
+```
+
+
+
+I used the group_by() function to determine that I would like to summarize data based on the quality of the banana. This function seperates the good and bad bananas from each other to determine the average for both individually. I then used the summarize function to find the count of good and bad bananas, as well as the mean sweetness, softness, and ripeness for both qualities of banana. I determined that there are around the same number of good and bad bananas, but good bananas were typically sweeter and riper. Both banana qualities had around the same softness.
